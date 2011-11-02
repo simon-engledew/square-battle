@@ -117,6 +117,10 @@
     <Content Include="GameThumbnail.png" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Farseer\Farseer Physics XNA.csproj">
+      <Project>{0A850700-1ABB-4288-A391-6726B90EBEB9}</Project>
+      <Name>Farseer Physics XNA</Name>
+    </ProjectReference>
     <ProjectReference Include="..\SpaceContent\SpaceContent.contentproj">
       <Name>SpaceContent</Name>
       <XnaReferenceType>Content</XnaReferenceType>
