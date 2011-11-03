@@ -27,9 +27,26 @@ namespace Space
     {
         public static void Draw(this Fixture fixture, GraphicsDevice graphics, Color color, Matrix? matrix = null)
         {
-            VertexPositionColor[] vertices = ((PolygonShape)fixture.Shape).ToVertices(color, matrix);
-            
-            graphics.DrawUserPrimitives<VertexPositionColor>(PrimitiveType.LineStrip, vertices, 0, vertices.Length - 1);
+            switch (fixture.ShapeType)
+            {
+                case ShapeType.Polygon:
+                {
+                    VertexPositionColor[] vertices = ((PolygonShape)fixture.Shape).ToVertices(color, matrix);
+
+                    graphics.DrawUserPrimitives<VertexPositionColor>(PrimitiveType.LineStrip, vertices, 0, vertices.Length - 1);
+                }
+                break;
+                case ShapeType.Circle:
+                {
+                    CircleShape circle = ((CircleShape)fixture.Shape);
+
+                    graphics.DrawUserPrimitives<VertexPositionColor>(PrimitiveType.LineStrip, new VertexPositionColor[] {
+                        new VertexPositionColor(new Vector3(Vector2.Transform(Vector2.Zero, matrix ?? Matrix.Identity), 0.0f), color),
+                        new VertexPositionColor(new Vector3(Vector2.Transform(new Vector2(circle.Radius, circle.Radius), matrix ?? Matrix.Identity), 0.0f), color)
+                    }, 0, 1);
+                }
+                break;
+            }
         }
     }
 
@@ -98,6 +115,14 @@ namespace Space
                 body.UserData = new Color(grey, grey, grey);
             }
 
+            for (int i = 0; i < 500; i++)
+            {
+                Body body = BodyFactory.CreateCircle(world, 1.0f, 0.5f);
+                body.BodyType = BodyType.Dynamic;
+                body.SetTransform(new Vector2(center.X + random.Next(-100, 100), center.Y + random.Next(-100, 100)), 0.0f);
+                body.ApplyTorque(1.0f);
+                body.UserData = Color.SkyBlue;
+            }
             
             this.ship = BodyFactory.CreatePolygon(world, new Vertices(new Vector2[] { new Vector2(0, -10), new Vector2(10, 10), new Vector2(-10, 10) }), 1.0f);
             this.ship.SetTransform(new Vector2(center.X, center.Y), 0.0f);
@@ -105,6 +130,14 @@ namespace Space
             this.ship.UserData = Color.White;
             //ship.ApplyForce(new Vector2(random.Next(-50, 50), 0.0f));
             //ship.ApplyTorque(1.0f);
+        }
+
+        private Vector2 Velocity(float force, float rotation)
+        {
+            return new Vector2(
+                (float)Math.Cos(rotation - MathHelper.PiOver2) * force,
+                (float)Math.Sin(rotation - MathHelper.PiOver2) * force
+            );
         }
 
         public void Update(GameTime gameTime)
@@ -119,6 +152,9 @@ namespace Space
             {
                 this.ship.ApplyAngularImpulse(10.0f);
             }
+            
+            this.ship.ApplyAngularImpulse(GamePad.GetState(PlayerIndex.One).ThumbSticks.Left.X * 10.0f);
+            this.ship.ApplyLinearImpulse(Velocity(GamePad.GetState(PlayerIndex.One).Triggers.Right * 10.0f, this.ship.Rotation));
 
             if (Keyboard.GetState().IsKeyDown(Keys.Space))
             {
