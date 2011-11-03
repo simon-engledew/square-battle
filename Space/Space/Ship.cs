@@ -66,6 +66,12 @@ namespace Space
 
             // step the simulation forward
             this.world.Step(timedelta / 10.0f);
+
+            foreach (Body body in this.bodies)
+            {
+                body.SetTransform(VectorExtensions.Modulo(body.Position, new Vector2(graphics.Viewport.Width, graphics.Viewport.Height)), body.Rotation);
+                
+            }
         }
 
         public void DrawBody(Body body, Color color)
