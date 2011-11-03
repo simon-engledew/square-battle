@@ -16,9 +16,8 @@ namespace Space
         BasicEffect basicEffect;
         GraphicsDevice graphics;
         World world;
-
-        Body blue;
-        Body red;
+        List<Body> bodies = new List<Body>();
+        Random random = new Random(0);
 
         public Ship(GraphicsDevice graphicsDevice)
         {
@@ -41,24 +40,24 @@ namespace Space
             // center of the board
             Point center = graphics.Viewport.TitleSafeArea.Center;
 
-            // RED, a rectangle with a heart of gold
-            this.red = BodyFactory.CreateRectangle(world, 10.0f, 10.0f, 1.0f);
-            // in the middle, a little bit of rotation
-            this.red.SetTransform(new Vector2(center.X + 100.0f, center.Y), 0.5f);
-            // turn on the simulation for this body. off by default to save CPU power
-            this.red.BodyType = BodyType.Dynamic;
-            // push red - he hates to be pushed!
-            this.red.ApplyForce(new Vector2(-50.0f, 0.0f));
-            // torque him
-            this.red.ApplyTorque(100.0f);
+            for (int i = 0; i < 100; i++)
+            {
+                Body body = BodyFactory.CreateRectangle(world, 10.0f, 10.0f, random.Next(1, 5));
+                body.SetTransform(new Vector2(center.X + random.Next(-100, 100), center.Y + random.Next(-100, 100)), 0.5f);
+                body.BodyType = BodyType.Dynamic;
+                body.ApplyForce(new Vector2(random.Next(-50, 50), 0.0f));
+                body.ApplyTorque(random.Next(1, 100));
+                this.bodies.Add(body);
+            }
 
-            // blue, a down and out square, seen better days
-            this.blue = BodyFactory.CreateRectangle(world, 10.0f, 10.0f, 1.0f);
-            // set him up across from red
-            this.blue.SetTransform(new Vector2(center.X - 100.0f, center.Y), 0.0f);
-            this.blue.BodyType = BodyType.Dynamic;
-            this.blue.ApplyForce(new Vector2(10.0f, 0.0f));
-            this.blue.ApplyTorque(100.0f);
+            
+            Body ship = BodyFactory.CreatePolygon(world, new Vertices(new Vector2[] { new Vector2(0, -10), new Vector2(10, 10), new Vector2(-10, 10) }), 1.0f);
+            ship.SetTransform(new Vector2(center.X, center.Y), 0.0f);
+            ship.BodyType = BodyType.Dynamic;
+
+            this.bodies.Add(ship);
+            //ship.ApplyForce(new Vector2(random.Next(-50, 50), 0.0f));
+            //ship.ApplyTorque(1.0f);
         }
 
         public void Update(GameTime gameTime)
@@ -100,17 +99,16 @@ namespace Space
                 vertices[i].Color = color;
 
                 // draw the rectangle to the screen
-                graphics.DrawUserPrimitives<VertexPositionColor>(PrimitiveType.LineStrip, vertices, 0, 4);
+                graphics.DrawUserPrimitives<VertexPositionColor>(PrimitiveType.LineStrip, vertices, 0, shape.Vertices.Count);
             }
         }
 
         public void Draw()
         {
-            // draw RED
-            DrawBody(red, Color.Red);
-            // draw BLUE
-            DrawBody(blue, Color.Blue);
-            // fight!
+            for (int i = 0; i < this.bodies.Count; i++)
+            {
+                DrawBody(this.bodies[i], i % 2 == 0 ? Color.Red : Color.Green);
+            }
         }
     }
 }
