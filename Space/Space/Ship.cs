@@ -43,12 +43,14 @@ namespace Space
 
             for (int i = 0; i < 100; i++)
             {
-                Body body = BodyFactory.CreateRectangle(world, 10.0f, 10.0f, random.Next(1, 5));
+                int mass = random.Next(1, 5);
+                Body body = BodyFactory.CreateRectangle(world, 10.0f, 10.0f, mass);
                 body.SetTransform(new Vector2(center.X + random.Next(-100, 100), center.Y + random.Next(-100, 100)), 0.5f);
                 body.BodyType = BodyType.Dynamic;
                 body.ApplyForce(new Vector2(random.Next(-50, 50), 0.0f));
                 body.ApplyTorque(random.Next(1, 100));
-                this.bodies.Add(new Tuple<Body, Color>(body, new Color(random.Next(20, 210), random.Next(20, 210), random.Next(20, 210))));
+                int grey = ((5 - mass) * 10) + 50;
+                this.bodies.Add(new Tuple<Body, Color>(body, new Color(grey, grey, grey)));
             }
 
             
