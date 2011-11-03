@@ -22,8 +22,21 @@ namespace Space
         {
             foreach (Fixture fixture in body.FixtureList)
             {
-                fixture.Draw(graphics, color, Matrix.Multiply(Matrix.CreateRotationZ(body.Rotation), Matrix.CreateTranslation(new Vector3(body.Position, 0.0f))));
+                Matrix matrix = Matrix.Multiply(
+                    Matrix.CreateRotationZ(body.Rotation),
+                    Matrix.CreateTranslation(new Vector3(body.Position, 0.0f))
+                );
+
+                fixture.Draw(graphics, color, matrix);
             }
+        }
+
+        public static Vector2 GetVelocity(this Body body, float force)
+        {
+            return new Vector2(
+                (float)Math.Cos(body.Rotation - MathHelper.PiOver2) * force,
+                (float)Math.Sin(body.Rotation - MathHelper.PiOver2) * force
+            );
         }
     }
 
@@ -31,26 +44,30 @@ namespace Space
     {
         public static void Draw(this Fixture fixture, GraphicsDevice graphics, Color color, Matrix? matrix = null)
         {
+            VertexPositionColor[] vertices;
+
             switch (fixture.ShapeType)
             {
                 case ShapeType.Polygon:
-                    {
-                        VertexPositionColor[] vertices = ((PolygonShape)fixture.Shape).ToVertices(color, matrix);
-
-                        graphics.DrawUserPrimitives<VertexPositionColor>(PrimitiveType.LineStrip, vertices, 0, vertices.Length - 1);
-                    }
-                    break;
+                {
+                    vertices = ((PolygonShape)fixture.Shape).ToVertices(color, matrix);
+                }
+                break;
                 case ShapeType.Circle:
-                    {
-                        CircleShape circle = ((CircleShape)fixture.Shape);
+                {
+                    CircleShape circle = ((CircleShape)fixture.Shape);
 
-                        graphics.DrawUserPrimitives<VertexPositionColor>(PrimitiveType.LineStrip, new VertexPositionColor[] {
+                    vertices = new VertexPositionColor[]
+                    {
                         new VertexPositionColor(new Vector3(Vector2.Transform(Vector2.Zero, matrix ?? Matrix.Identity), 0.0f), color),
-                        new VertexPositionColor(new Vector3(Vector2.Transform(new Vector2(circle.Radius, circle.Radius), matrix ?? Matrix.Identity), 0.0f), color)
-                    }, 0, 1);
-                    }
-                    break;
+                        new VertexPositionColor(new Vector3(Vector2.Transform(new Vector2(circle.Radius), matrix ?? Matrix.Identity), 0.0f), color)
+                    };
+                }
+                break;
+                default: throw new InvalidOperationException(String.Format("Unable to render ShapeType {0}", fixture.ShapeType));
             }
+
+            graphics.DrawUserPrimitives<VertexPositionColor>(PrimitiveType.LineStrip, vertices, 0, vertices.Length - 1);
         }
     }
 
@@ -75,42 +92,6 @@ namespace Space
 
             return vertices;
         }
-    }
-
-    abstract class BodyData
-    {
-        abstract public Color Color
-        {
-            get;
-        }
-    }
-
-    class SolidColor : BodyData
-    {
-        public SolidColor(Color color)
-        {
-            this.color = color;
-        }
-        protected Color color;
-        override public Color Color
-        {
-            get
-            {
-                return this.color;
-            }
-        }
-    }
-
-    class FadeColor : BodyData
-    {
-        override public Color Color
-        {
-            get
-            {
-                return Color.CornflowerBlue * (1 - ((float)Lifetime / (float)Lifespan));
-            }
-        }
-        public int Lifespan, Lifetime = 0;
     }
 
     public static class VectorExtensions
@@ -150,74 +131,56 @@ namespace Space
 
         protected override void LoadContent()
         {
-            bounds = new Vector2(GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height);
+            this.bounds = new Vector2(GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height);
 
-            spriteBatch = new SpriteBatch(GraphicsDevice);
+            this.spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            basicEffect = new BasicEffect(GraphicsDevice);
-            basicEffect.VertexColorEnabled = true;
-            basicEffect.Projection = Matrix.CreateOrthographicOffCenter(
-                0, basicEffect.GraphicsDevice.Viewport.Width,
-                basicEffect.GraphicsDevice.Viewport.Height, 0,
+            this.basicEffect = new BasicEffect(GraphicsDevice);
+            this.basicEffect.VertexColorEnabled = true;
+            this.basicEffect.Projection = Matrix.CreateOrthographicOffCenter(
+                0, this.basicEffect.GraphicsDevice.Viewport.Width,
+                this.basicEffect.GraphicsDevice.Viewport.Height, 0,
                 0, 1
             );
 
 
-            // physics world where the simulation happens
             this.world = new World(Vector2.Zero);
 
-            // center of the board
             Point center = GraphicsDevice.Viewport.TitleSafeArea.Center;
 
             for (int i = 0; i < 100; i++)
             {
                 int mass = random.Next(1, 5);
-                Body body = BodyFactory.CreateRectangle(world, 10.0f, 10.0f, mass);
+                Body body = BodyFactory.CreateRectangle(this.world, 10.0f, 10.0f, mass);
                 body.SetTransform(new Vector2(center.X + random.Next(-100, 100), center.Y + random.Next(-100, 100)), 0.5f);
                 body.BodyType = BodyType.Dynamic;
-                body.ApplyForce(new Vector2(random.Next(-50, 50), 0.0f));
-                body.ApplyTorque(random.Next(1, 100));
+                body.ApplyForce(new Vector2(this.random.Next(-50, 50), 0.0f));
+                body.ApplyTorque(this.random.Next(1, 100));
                 int grey = ((5 - mass) * 10) + 50;
-                body.UserData = new SolidColor(new Color(grey, grey, grey));
+                body.UserData = new Color(grey, grey, grey);
             }
 
-            for (int i = 0; i < 500; i++)
+            for (int i = 0; i < 1000; i++)
             {
-                Body body = BodyFactory.CreateCircle(world, 1.0f, 0.25f);
+                Body body = BodyFactory.CreateCircle(this.world, 1.0f, 0.25f);
                 body.BodyType = BodyType.Dynamic;
-                body.SetTransform(new Vector2(random.Next(0, GraphicsDevice.Viewport.TitleSafeArea.Right), random.Next(0, GraphicsDevice.Viewport.TitleSafeArea.Bottom)), 0.0f);
+                body.SetTransform(new Vector2(this.random.Next(0, GraphicsDevice.Viewport.TitleSafeArea.Right), this.random.Next(0, GraphicsDevice.Viewport.TitleSafeArea.Bottom)), 0.0f);
                 body.ApplyTorque(1.0f);
-                body.UserData = new SolidColor(Color.CornflowerBlue); //new FadeColor() { Lifespan = random.Next(2000, 5000) };
+                body.UserData = Color.CornflowerBlue * Math.Min((float)this.random.NextDouble() + 0.2f, 1.0f);
             }
 
-            this.ship = BodyFactory.CreatePolygon(world, new Vertices(new Vector2[] { new Vector2(0, -10), new Vector2(10, 10), new Vector2(-10, 10) }), 1.0f);
+            this.ship = BodyFactory.CreatePolygon(this.world, new Vertices(new Vector2[] { new Vector2(0, -10), new Vector2(10, 10), new Vector2(-10, 10) }), 1.0f);
             this.ship.SetTransform(new Vector2(center.X, center.Y), 0.0f);
             this.ship.BodyType = BodyType.Dynamic;
-            this.ship.UserData = new SolidColor(Color.White);
-
-            // TODO: use this.Content to load your game content here
+            this.ship.UserData = Color.White;
         }
 
-        /// <summary>
-        /// UnloadContent will be called once per game and is the place to unload
-        /// all content.
-        /// </summary>
         protected override void UnloadContent()
         {
-            // TODO: Unload any non ContentManager content here
-        }
-
-        private Vector2 Velocity(float force, float rotation)
-        {
-            return new Vector2(
-                (float)Math.Cos(rotation - MathHelper.PiOver2) * force,
-                (float)Math.Sin(rotation - MathHelper.PiOver2) * force
-            );
         }
 
         protected override void Update(GameTime gameTime)
         {
-            // Allows the game to exit
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
             {
                 this.Exit();
@@ -240,12 +203,12 @@ namespace Space
 
             if (trigger > 0)
             {
-                this.ship.ApplyLinearImpulse(Velocity(trigger * 10.0f, this.ship.Rotation));
+                this.ship.ApplyLinearImpulse(this.ship.GetVelocity(trigger * 10.0f));
             }
 
             if (Keyboard.GetState().IsKeyDown(Keys.Space))
             {
-                this.ship.ApplyLinearImpulse(Velocity(10.0f, this.ship.Rotation));
+                this.ship.ApplyLinearImpulse(this.ship.GetVelocity(10.0f));
             }
 
             if (Keyboard.GetState().IsKeyDown(Keys.T))
@@ -253,7 +216,6 @@ namespace Space
                 CuttingTools.Cut(world, Vector2.Zero, bounds, 0.001f);
             }
 
-            // step the simulation forward
             this.world.Step(timedelta / 10.0f);
 
             foreach (Body body in this.world.BodyList)
@@ -261,22 +223,11 @@ namespace Space
                 Vector2 wrappedPosition = VectorExtensions.Modulo(body.Position, bounds);
 
                 body.SetTransformIgnoreContacts(ref wrappedPosition, body.Rotation);
-
-                if (body.UserData is FadeColor)
-                {
-                    FadeColor data = (FadeColor)body.UserData;
-                    data.Lifetime += timedelta;
-                    if (data.Lifetime >= data.Lifespan)
-                    {
-                        world.RemoveBody(body);
-                    }
-                }
             }
 
             base.Update(gameTime);
         }
 
-        static BodyData Unknown = new SolidColor(Color.Red);
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.Black);
@@ -290,7 +241,7 @@ namespace Space
 
             foreach (Body body in this.world.BodyList)
             {
-                body.Draw(GraphicsDevice, ((BodyData)(body.UserData ?? Unknown)).Color);
+                body.Draw(GraphicsDevice, (Color)(body.UserData ?? Color.Red));
             }
         }
     }
