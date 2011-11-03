@@ -12,6 +12,50 @@ using FarseerPhysics.Common.PolygonManipulation;
 
 namespace Space
 {
+    public static class BodyExtensions
+    {
+        public static void Draw(this Body body, GraphicsDevice graphics, Color color)
+        {
+            foreach (Fixture fixture in body.FixtureList)
+            {
+                fixture.Draw(graphics, color, Matrix.Multiply(Matrix.CreateRotationZ(body.Rotation), Matrix.CreateTranslation(new Vector3(body.Position, 0.0f))));
+            }
+        }
+    }
+
+    public static class FixtureExtensions
+    {
+        public static void Draw(this Fixture fixture, GraphicsDevice graphics, Color color, Matrix? matrix = null)
+        {
+            VertexPositionColor[] vertices = ((PolygonShape)fixture.Shape).ToVertices(color, matrix);
+            
+            graphics.DrawUserPrimitives<VertexPositionColor>(PrimitiveType.LineStrip, vertices, 0, vertices.Length - 1);
+        }
+    }
+
+    public static class PolygonShapeExtensions
+    {
+        public static VertexPositionColor[] ToVertices(this PolygonShape shape, Color color, Matrix? matrix = null)
+        {
+            // create a new vertex array to hold our drawing information (one bigger than the number of Vertices to loop back round and close the rectangle
+            VertexPositionColor[] vertices = new VertexPositionColor[shape.Vertices.Count + 1];
+
+            // loop through the vertices, saving each one into an array slot
+            int i = 0;
+            foreach (Vector2 vector in shape.Vertices)
+            {
+                vertices[i].Position = new Vector3(Vector2.Transform(vector, matrix ?? Matrix.Identity), 0.0f);
+                vertices[i].Color = color;
+                ++i;
+            }
+            // put in the final vertex, closing off the polygon
+            vertices[i].Position = vertices[0].Position;
+            vertices[i].Color = vertices[0].Color;
+
+            return vertices;
+        }
+    }
+
     class Ship
     {
         BasicEffect basicEffect;
@@ -34,6 +78,7 @@ namespace Space
                 graphics.Viewport.Height, 0,
                 0, 1
             );
+
             
             // physics world where the simulation happens
             this.world = new World(Vector2.Zero);
@@ -87,7 +132,7 @@ namespace Space
 
             if (Keyboard.GetState().IsKeyDown(Keys.T))
             {
-                CuttingTools.Cut(world, Vector2.Zero, new Vector2(640.0f, 480.0f), 0.001f);
+                CuttingTools.Cut(world, Vector2.Zero, new Vector2(graphics.Viewport.Width, graphics.Viewport.Height), 0.001f);
             }
 
             // step the simulation forward
@@ -98,47 +143,17 @@ namespace Space
                 body.SetTransform(VectorExtensions.Modulo(body.Position, new Vector2(graphics.Viewport.Width, graphics.Viewport.Height)), body.Rotation);
             }
         }
-
-        public void DrawBody(Body body, Color color)
-        {
-            // shift the current context into place to stamp down the little critter
-            basicEffect.World = Matrix.Multiply(Matrix.CreateRotationZ(body.Rotation), Matrix.CreateTranslation(new Vector3(body.Position, 0.0f)));
-            basicEffect.CurrentTechnique.Passes[0].Apply();
-
-            // go through every fixture in this body (only one atm: the square!)
-            foreach (Fixture fixture in body.FixtureList)
-            {
-                /*
-                 * cast the shape into a special case of the Shape object -> PolygonShape. PolygonShape knows all about Vertices, which we need to draw. There
-                 * are a whole host of other shape types that we could draw in different ways
-                 */
-                PolygonShape shape = (PolygonShape)fixture.Shape;
-
-                // create a new vertex array to hold our drawing information (one bigger than the number of Vertices to loop back round and close the rectangle
-                VertexPositionColor[] vertices = new VertexPositionColor[shape.Vertices.Count + 1];
-
-                // loop through the vertices, saving each one into an array slot
-                int i = 0;
-                foreach (Vector2 vector in shape.Vertices)
-                {
-                    vertices[i].Position = new Vector3(vector, 0.0f);
-                    vertices[i].Color = color;
-                    ++i;
-                }
-                // put in the final vertex, closing off the rectangle
-                vertices[i].Position = new Vector3(shape.Vertices[0], 0.0f);
-                vertices[i].Color = color;
-
-                // draw the rectangle to the screen
-                graphics.DrawUserPrimitives<VertexPositionColor>(PrimitiveType.LineStrip, vertices, 0, shape.Vertices.Count);
-            }
-        }
-
+        
         public void Draw()
         {
+            foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
+            {
+                pass.Apply();
+            }
+
             foreach (Body body in this.world.BodyList)
             {
-                DrawBody(body, (Color)(body.UserData ?? Color.Red));
+                body.Draw(graphics, (Color)(body.UserData ?? Color.Red));
             }
         }
     }
