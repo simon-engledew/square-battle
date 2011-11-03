@@ -17,6 +17,7 @@ namespace Space
         GraphicsDevice graphics;
         World world;
         List<Tuple<Body, Color>> bodies = new List<Tuple<Body, Color>>();
+        Body ship;
         Random random = new Random(0);
 
         public Ship(GraphicsDevice graphicsDevice)
@@ -51,11 +52,11 @@ namespace Space
             }
 
             
-            Body ship = BodyFactory.CreatePolygon(world, new Vertices(new Vector2[] { new Vector2(0, -10), new Vector2(10, 10), new Vector2(-10, 10) }), 1.0f);
-            ship.SetTransform(new Vector2(center.X, center.Y), 0.0f);
-            ship.BodyType = BodyType.Dynamic;
+            this.ship = BodyFactory.CreatePolygon(world, new Vertices(new Vector2[] { new Vector2(0, -10), new Vector2(10, 10), new Vector2(-10, 10) }), 1.0f);
+            this.ship.SetTransform(new Vector2(center.X, center.Y), 0.0f);
+            this.ship.BodyType = BodyType.Dynamic;
 
-            this.bodies.Add(new Tuple<Body, Color>(ship, Color.White));
+            this.bodies.Add(new Tuple<Body, Color>(this.ship, Color.White));
             //ship.ApplyForce(new Vector2(random.Next(-50, 50), 0.0f));
             //ship.ApplyTorque(1.0f);
         }
@@ -63,6 +64,25 @@ namespace Space
         public void Update(GameTime gameTime)
         {
             float timedelta = gameTime.ElapsedGameTime.Milliseconds;
+
+            if (Keyboard.GetState().IsKeyDown(Keys.Left))
+            {
+                this.ship.ApplyAngularImpulse(-10.0f);
+            }
+            if (Keyboard.GetState().IsKeyDown(Keys.Right))
+            {
+                this.ship.ApplyAngularImpulse(10.0f);
+            }
+
+            if (Keyboard.GetState().IsKeyDown(Keys.Space))
+            {
+                Vector2 velocityDelta = new Vector2(
+                    (float)Math.Cos(this.ship.Rotation - MathHelper.PiOver2) * 10,
+                    (float)Math.Sin(this.ship.Rotation - MathHelper.PiOver2) * 10
+                );
+
+                this.ship.ApplyForce(velocityDelta);
+            }
 
             // step the simulation forward
             this.world.Step(timedelta / 10.0f);
