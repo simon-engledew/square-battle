@@ -16,7 +16,7 @@ namespace Space
         BasicEffect basicEffect;
         GraphicsDevice graphics;
         World world;
-        List<Body> bodies = new List<Body>();
+        List<Tuple<Body, Color>> bodies = new List<Tuple<Body, Color>>();
         Random random = new Random(0);
 
         public Ship(GraphicsDevice graphicsDevice)
@@ -47,7 +47,7 @@ namespace Space
                 body.BodyType = BodyType.Dynamic;
                 body.ApplyForce(new Vector2(random.Next(-50, 50), 0.0f));
                 body.ApplyTorque(random.Next(1, 100));
-                this.bodies.Add(body);
+                this.bodies.Add(new Tuple<Body, Color>(body, new Color(random.Next(20, 210), random.Next(20, 210), random.Next(20, 210))));
             }
 
             
@@ -55,7 +55,7 @@ namespace Space
             ship.SetTransform(new Vector2(center.X, center.Y), 0.0f);
             ship.BodyType = BodyType.Dynamic;
 
-            this.bodies.Add(ship);
+            this.bodies.Add(new Tuple<Body, Color>(ship, Color.White));
             //ship.ApplyForce(new Vector2(random.Next(-50, 50), 0.0f));
             //ship.ApplyTorque(1.0f);
         }
@@ -67,10 +67,9 @@ namespace Space
             // step the simulation forward
             this.world.Step(timedelta / 10.0f);
 
-            foreach (Body body in this.bodies)
+            foreach (Tuple<Body, Color> tuple in this.bodies)
             {
-                body.SetTransform(VectorExtensions.Modulo(body.Position, new Vector2(graphics.Viewport.Width, graphics.Viewport.Height)), body.Rotation);
-                
+                tuple.Item1.SetTransform(VectorExtensions.Modulo(tuple.Item1.Position, new Vector2(graphics.Viewport.Width, graphics.Viewport.Height)), tuple.Item1.Rotation);
             }
         }
 
@@ -111,9 +110,9 @@ namespace Space
 
         public void Draw()
         {
-            for (int i = 0; i < this.bodies.Count; i++)
+            foreach (Tuple<Body, Color> tuple in this.bodies)
             {
-                DrawBody(this.bodies[i], i % 2 == 0 ? Color.Red : Color.Green);
+                DrawBody(tuple.Item1, tuple.Item2);
             }
         }
     }
