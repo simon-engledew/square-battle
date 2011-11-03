@@ -8,6 +8,7 @@ using FarseerPhysics.Factories;
 using FarseerPhysics.Dynamics;
 using FarseerPhysics.Common;
 using FarseerPhysics.Collision.Shapes;
+using FarseerPhysics.Common.PolygonManipulation;
 
 namespace Space
 {
@@ -16,7 +17,6 @@ namespace Space
         BasicEffect basicEffect;
         GraphicsDevice graphics;
         World world;
-        List<Tuple<Body, Color>> bodies = new List<Tuple<Body, Color>>();
         Body ship;
         Random random = new Random(0);
 
@@ -50,15 +50,14 @@ namespace Space
                 body.ApplyForce(new Vector2(random.Next(-50, 50), 0.0f));
                 body.ApplyTorque(random.Next(1, 100));
                 int grey = ((5 - mass) * 10) + 50;
-                this.bodies.Add(new Tuple<Body, Color>(body, new Color(grey, grey, grey)));
+                body.UserData = new Color(grey, grey, grey);
             }
 
             
             this.ship = BodyFactory.CreatePolygon(world, new Vertices(new Vector2[] { new Vector2(0, -10), new Vector2(10, 10), new Vector2(-10, 10) }), 1.0f);
             this.ship.SetTransform(new Vector2(center.X, center.Y), 0.0f);
             this.ship.BodyType = BodyType.Dynamic;
-
-            this.bodies.Add(new Tuple<Body, Color>(this.ship, Color.White));
+            this.ship.UserData = Color.White;
             //ship.ApplyForce(new Vector2(random.Next(-50, 50), 0.0f));
             //ship.ApplyTorque(1.0f);
         }
@@ -83,15 +82,20 @@ namespace Space
                     (float)Math.Sin(this.ship.Rotation - MathHelper.PiOver2) * 10
                 );
 
-                this.ship.ApplyForce(velocityDelta);
+                this.ship.ApplyLinearImpulse(velocityDelta);
+            }
+
+            if (Keyboard.GetState().IsKeyDown(Keys.T))
+            {
+                CuttingTools.Cut(world, Vector2.Zero, new Vector2(640.0f, 480.0f), 0.001f);
             }
 
             // step the simulation forward
             this.world.Step(timedelta / 10.0f);
 
-            foreach (Tuple<Body, Color> tuple in this.bodies)
+            foreach (Body body in this.world.BodyList)
             {
-                tuple.Item1.SetTransform(VectorExtensions.Modulo(tuple.Item1.Position, new Vector2(graphics.Viewport.Width, graphics.Viewport.Height)), tuple.Item1.Rotation);
+                body.SetTransform(VectorExtensions.Modulo(body.Position, new Vector2(graphics.Viewport.Width, graphics.Viewport.Height)), body.Rotation);
             }
         }
 
@@ -132,9 +136,9 @@ namespace Space
 
         public void Draw()
         {
-            foreach (Tuple<Body, Color> tuple in this.bodies)
+            foreach (Body body in this.world.BodyList)
             {
-                DrawBody(tuple.Item1, tuple.Item2);
+                DrawBody(body, (Color)(body.UserData ?? Color.Red));
             }
         }
     }
