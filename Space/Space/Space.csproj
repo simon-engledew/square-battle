@@ -107,9 +107,13 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Extensions\BodyExtensions.cs" />
+    <Compile Include="Extensions\FixtureExtensions.cs" />
+    <Compile Include="Extensions\PolygonShapeExtensions.cs" />
+    <Compile Include="Extensions\VectorExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Program.cs" />
-    <Compile Include="Game1.cs" />
+    <Compile Include="SpaceGame.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Game.ico" />
